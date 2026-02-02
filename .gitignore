@@ -1,0 +1,126 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+*.tsbuildinfo
+.turbo/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+config.json
+
+# Private keys and sensitive data
+*.key
+*.pem
+private-key*
+wallet.json
+secrets/
+.secrets/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# macOS-specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Other OS files
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-*
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.tmproj
+*.iml
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+test-report/
+*.lcov
+
+# Data
+data/
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Vercel
+.vercel
+
+# TypeScript
+next-env.d.ts
+
+# Local development
+.local/
+local/
+
+# Rollback
+.rollback_*/
+.setup_state
+setup_*.log
+
+# Homebrew
+Brewfile.lock.json
+

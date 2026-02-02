@@ -1,0 +1,71 @@
+{
+  "network": "mainnet-beta",
+  "platform": "universal",
+  "rpc": {
+    "endpoints": [
+      {
+        "url": "https://api.mainnet-beta.solana.com",
+        "provider": "public",
+        "priority": 1,
+        "type": "http"
+      }
+    ],
+    "wsEndpoints": [
+      {
+        "url": "wss://api.mainnet-beta.solana.com",
+        "provider": "public",
+        "priority": 1
+      }
+    ],
+    "healthCheckIntervalMs": 30000,
+    "maxRetries": 3,
+    "timeoutMs": 30000
+  },
+  "strategy": {
+    "entryMinConfidence": 0.7,
+    "entryMinPumpProb": 0.55,
+    "entryMaxRugProb": 0.35,
+    "positionSizePercent": 5,
+    "maxConcurrentPositions": 3,
+    "exitTakeProfitPct": 50,
+    "exitStopLossPct": 20,
+    "exitTimeoutMinutes": 60,
+    "enableTrailingStop": true,
+    "trailingStopPct": 10
+  },
+  "risk": {
+    "maxTradeRiskSol": 1,
+    "maxDailyLossSol": 5,
+    "maxPositionSizeSol": 2,
+    "maxConcurrentPositions": 3,
+    "emergencyStopLossPct": 30,
+    "maxDrawdownPct": 20,
+    "enableCircuitBreaker": true,
+    "circuitBreakerThreshold": 3
+  },
+  "filters": {
+    "minLiquiditySol": 0,
+    "maxLiquiditySol": 1000000,
+    "minVolume24hSol": 0,
+    "maxTopHolderPct": 30,
+    "requireFrozenAuthority": true,
+    "requireRevokedMintAuthority": false,
+    "minHolderCount": 0,
+    "maxAgeHours": 24
+  },
+  "execution": {
+    "slippageBps": 500,
+    "priorityFeeLamports": 10000,
+    "maxRetries": 3,
+    "confirmationTimeout": 60000
+  },
+  "notifications": {
+    "macos": {
+      "enabled": true,
+      "sound": true,
+      "onPositionOpen": true,
+      "onPositionClose": true,
+      "onAlert": true
+    }
+  }
+}

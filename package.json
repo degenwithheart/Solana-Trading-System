@@ -1,0 +1,33 @@
+{
+  "name": "solana-trading-system",
+  "version": "1.0.0",
+  "description": "Professional Solana SPL memecoin trading system (macOS)",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "workspaces": [
+    "system-1-trading-node",
+    "system-2-signer",
+    "system-3-web-ui"
+  ],
+  "scripts": {
+    "install:all": "npm run install:s1 && npm run install:s2 && npm run install:s3",
+    "install:s1": "cd system-1-trading-node && npm install",
+    "install:s2": "cd system-2-signer && npm install",
+    "install:s3": "cd system-3-web-ui && npm install",
+    "setup:env": "node scripts/setup-env.mjs",
+    "validate": "node scripts/validate.mjs",
+    "build:all": "npm run build:s1 && npm run build:s2 && npm run build:s3",
+    "build:s1": "cd system-1-trading-node && npm run build",
+    "build:s2": "cd system-2-signer && npm run build",
+    "build:s3": "cd system-3-web-ui && npm run build",
+    "dev:s1": "cd system-1-trading-node && npm run dev",
+    "dev:s2": "cd system-2-signer && npm run dev",
+    "dev:s3": "cd system-3-web-ui && npm run dev",
+    "start:s1": "cd system-1-trading-node && npm start",
+    "start:s2": "cd system-2-signer && npm start",
+    "start:s3": "cd system-3-web-ui && npm start"
+  }
+}
