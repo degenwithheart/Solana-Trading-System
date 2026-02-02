@@ -8,6 +8,8 @@ export const zEnv = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   HOST: z.string().default("127.0.0.1"),
 
+  POLICY_PATH: z.string().default("./policy.json"),
+
   PRIVATE_KEY: z.string().optional().default(""),
   PUBLIC_KEY: z.string().optional().default(""),
 
@@ -15,7 +17,7 @@ export const zEnv = z.object({
   MAX_TRANSACTIONS_PER_HOUR: z.coerce.number().int().min(1).default(100),
   MAX_TRANSACTIONS_PER_DAY: z.coerce.number().int().min(1).default(500),
 
-  ENABLE_PROGRAM_ALLOWLIST: zEnvBool.default(false),
+  ENABLE_PROGRAM_ALLOWLIST: zEnvBool.default(true),
   ALLOWED_PROGRAMS: z.string().optional().default(""),
   ENABLE_AMOUNT_LIMITS: zEnvBool.default(true),
   MAX_TRANSACTION_AMOUNT_SOL: z.coerce.number().min(0).default(10),
@@ -44,4 +46,3 @@ export type SignerEnv = z.infer<typeof zEnv>;
 export function readEnv(processEnv: NodeJS.ProcessEnv): SignerEnv {
   return zEnv.parse(processEnv);
 }
-

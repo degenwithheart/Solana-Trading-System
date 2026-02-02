@@ -17,8 +17,14 @@ npm run setup:env
 
 Then edit:
 - `system-1-trading-node/config.json`
-- `system-2-signer/.env` (set `PRIVATE_KEY` base58, and optionally `API_KEY`)
+- `system-2-signer/.env` (set `PRIVATE_KEY` base58, and `API_KEY` if `REQUIRE_API_KEY=true`)
+- `system-2-signer/policy.json` (add allowlisted program IDs; deny-by-default)
 - `system-1-trading-node/.env` (set `API_KEY` if you want Trading Node → Signer auth)
+
+Key config sections:
+- `execution.venues` / `execution.venueOrder` (multi-venue routing)
+- `profiles` + `activeProfile` (risk + exits presets)
+- `controls` (defaults; runtime overrides via dashboard/API)
 
 ## 3) Build
 
@@ -36,6 +42,13 @@ cd solana-trading-system/system-3-web-ui && npm run dev
 
 Dashboard runs on `http://localhost:3002` by default.
 
+## Production UI hardening
+
+- Set `system-3-web-ui/.env.local`:
+  - `UI_ACCESS_PASSWORD=...` (enables unlock gate)
+  - `TRADING_NODE_API_KEY=...` (so the UI proxy adds `x-api-key`)
+- Prefer `npm run build && npm start` for the UI (avoid `next dev` in production).
+
 ## 5) Add a candidate mint (manual discovery)
 
 ```bash
@@ -49,8 +62,3 @@ curl -X POST http://localhost:3000/candidates \
 ```bash
 npm run validate
 ```
-
-## Optional: Bash scripts
-
-If you have Bash 5+ (macOS with Homebrew bash, Linux, Git Bash/WSL), you can also use the provided `setup_project_advanced.sh` / `validate_and_test.sh` in the parent folder, but the project itself does not require Bash.
-

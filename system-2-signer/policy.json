@@ -1,0 +1,11 @@
+{
+  "denyByDefault": true,
+  "allowlistedProgramIds": [],
+  "limits": {
+    "maxLamportsPerTransaction": 2000000000,
+    "maxComputeUnitPriceMicroLamports": 2000000,
+    "maxComputeUnits": 1400000
+  },
+  "requireSignerAsFeePayer": true
+}
+

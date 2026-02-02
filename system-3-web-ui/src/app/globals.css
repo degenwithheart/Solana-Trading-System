@@ -2,13 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: 11 16 32;
+  --fg: 230 233 242;
+  --card: 255 255 255;
+  --cardAlpha: 0.08;
+}
+
+.light {
+  --bg: 244 246 252;
+  --fg: 20 23 38;
+  --card: 255 255 255;
+  --cardAlpha: 0.7;
+}
+
 html,
 body {
   height: 100%;
 }
 
 body {
-  background: #0b1020;
-  color: #e6e9f2;
+  background: radial-gradient(1000px 500px at 10% 10%, rgba(140, 110, 255, 0.25), transparent 60%),
+    radial-gradient(900px 450px at 90% 20%, rgba(0, 200, 255, 0.18), transparent 60%),
+    radial-gradient(900px 450px at 40% 90%, rgba(255, 120, 200, 0.16), transparent 60%),
+    rgb(var(--bg));
+  color: rgb(var(--fg));
 }
 
+.bg-background {
+  background-color: rgb(var(--bg));
+}
+
+.text-foreground {
+  color: rgb(var(--fg));
+}
+
+.glass {
+  background: rgba(var(--card), var(--cardAlpha));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+}

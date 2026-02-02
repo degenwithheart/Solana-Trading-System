@@ -8,6 +8,7 @@ import { Logger } from "./logger";
 import { loadKeypair } from "./keypair";
 import { validateTransaction } from "./tx-validate";
 import { SlidingWindowCounter } from "./rate-limit";
+import { loadPolicy } from "./policy";
 import type { HealthStatus } from "../../shared/types";
 
 dotenv.config();
@@ -40,11 +41,11 @@ async function main() {
   const perHour = new SlidingWindowCounter(60 * 60_000);
   const perDay = new SlidingWindowCounter(24 * 60 * 60_000);
 
-  const allowedPrograms = new Set(
-    env.ALLOWED_PROGRAMS.split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-  );
+  const policy = loadPolicy(env.POLICY_PATH);
+  const allowedPrograms = new Set<string>([
+    ...policy.allowlistedProgramIds,
+    ...env.ALLOWED_PROGRAMS.split(",").map((s) => s.trim()).filter(Boolean)
+  ]);
 
   const app = express();
   app.disable("x-powered-by");
@@ -56,7 +57,8 @@ async function main() {
     if (env.ENABLE_IP_ALLOWLIST && allowedIps.size > 0 && !allowedIps.has(ip) && ip !== "::1") {
       return res.status(403).json({ error: "forbidden" });
     }
-    if (env.REQUIRE_API_KEY && env.API_KEY) {
+    if (env.REQUIRE_API_KEY) {
+      if (!env.API_KEY) return res.status(500).json({ error: "misconfigured_api_key" });
       const key = req.header("x-api-key") ?? "";
       if (key !== env.API_KEY) return res.status(401).json({ error: "unauthorized" });
     }
@@ -100,8 +102,11 @@ async function main() {
       validateTransaction(tx, {
         enableProgramAllowlist: env.ENABLE_PROGRAM_ALLOWLIST ?? false,
         allowedPrograms,
-        enableAmountLimits: env.ENABLE_AMOUNT_LIMITS ?? true,
-        maxTransactionAmountSol: env.MAX_TRANSACTION_AMOUNT_SOL
+        denyByDefault: policy.denyByDefault,
+        requireSignerAsFeePayer: policy.requireSignerAsFeePayer,
+        signerPublicKey: publicKey,
+        limits: policy.limits,
+        instructionDenyList: policy.instructionDenyList
       });
     } catch (e) {
       return res.status(400).json({ error: "transaction_rejected", details: e instanceof Error ? e.message : "" });
@@ -140,4 +145,3 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-

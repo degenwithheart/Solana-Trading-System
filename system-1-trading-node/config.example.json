@@ -1,6 +1,150 @@
 {
   "network": "mainnet-beta",
   "platform": "universal",
+  "constants": {
+    "wsolMint": "So11111111111111111111111111111111111111112"
+  },
+  "storage": {
+    "sqlite": {
+      "path": "./data/trading.db",
+      "wal": true,
+      "busyTimeoutMs": 5000
+    }
+  },
+  "mode": "live",
+  "paper": {
+    "initialSol": 50,
+    "feeReserveSol": 1
+  },
+  "governance": {
+    "mintBlocklist": [],
+    "mintAllowlist": [],
+    "maxAttemptsPerMintPerDay": 5,
+    "cooldownMinutesPerMint": 30
+  },
+  "mev": {
+    "maxQuoteDriftBps": 150,
+    "maxPriceImpactPct": 15,
+    "maxRouteSteps": 3,
+    "requireFreshQuoteMs": 1500
+  },
+  "reconciliation": {
+    "enabled": true,
+    "intervalMs": 30000
+  },
+  "metrics": {
+    "enabled": true,
+    "path": "/metrics",
+    "promPath": "/metrics/prom"
+  },
+  "discovery": {
+    "enabled": true,
+    "sources": [],
+    "backfill": {
+      "enabled": true,
+      "limitPerSource": 500,
+      "concurrency": 5
+    },
+    "dedupeTtlMs": 60000,
+    "maxCandidatesKept": 10000
+  },
+  "controls": {
+    "pauseDiscovery": false,
+    "pauseEntries": false,
+    "pauseExits": false,
+    "killSwitch": false
+  },
+  "execution": {
+    "venues": [
+      {
+        "name": "jupiter-any",
+        "enabled": true,
+        "kind": "jupiter",
+        "allowedDexLabels": [],
+        "onlyDirectRoutes": false,
+        "slippageBps": 500,
+        "maxPriorityFeeLamports": 10000,
+        "maxRetries": 3,
+        "confirmationTimeoutMs": 60000
+      },
+      {
+        "name": "jupiter-raydium-only",
+        "enabled": false,
+        "kind": "jupiter",
+        "allowedDexLabels": ["raydium"],
+        "onlyDirectRoutes": true,
+        "slippageBps": 700,
+        "maxPriorityFeeLamports": 15000,
+        "maxRetries": 3,
+        "confirmationTimeoutMs": 60000
+      },
+      {
+        "name": "jupiter-orca-only",
+        "enabled": false,
+        "kind": "jupiter",
+        "allowedDexLabels": ["orca"],
+        "onlyDirectRoutes": true,
+        "slippageBps": 700,
+        "maxPriorityFeeLamports": 15000,
+        "maxRetries": 3,
+        "confirmationTimeoutMs": 60000
+      },
+      {
+        "name": "jupiter-pumpfun-only",
+        "enabled": false,
+        "kind": "jupiter",
+        "allowedDexLabels": ["pump.fun", "pumpfun"],
+        "onlyDirectRoutes": true,
+        "slippageBps": 1000,
+        "maxPriorityFeeLamports": 20000,
+        "maxRetries": 3,
+        "confirmationTimeoutMs": 60000
+      }
+    ],
+    "venueOrder": ["jupiter-raydium-only", "jupiter-orca-only", "jupiter-pumpfun-only", "jupiter-any"]
+  },
+  "profiles": {
+    "conservative": {
+      "enabled": true,
+      "entry": {
+        "positionSizeFixedSol": 0,
+        "positionSizeWalletPct": 2,
+        "positionSizeMinSol": 0.05,
+        "positionSizeMaxSol": 0.5,
+        "maxOpenPositions": 2
+      },
+      "exits": {
+        "stopLossPct": 15,
+        "takeProfitLevels": [
+          { "profitPct": 30, "sellPct": 50 },
+          { "profitPct": 80, "sellPct": 50 }
+        ],
+        "trailingStop": { "enabled": true, "activationProfitPct": 25, "trailingPct": 12 },
+        "maxHoldMinutes": 180
+      }
+    },
+    "aggressive": {
+      "enabled": true,
+      "entry": {
+        "positionSizeFixedSol": 0,
+        "positionSizeWalletPct": 10,
+        "positionSizeMinSol": 0.1,
+        "positionSizeMaxSol": 2,
+        "maxOpenPositions": 5
+      },
+      "exits": {
+        "stopLossPct": 25,
+        "takeProfitLevels": [
+          { "profitPct": 50, "sellPct": 33.33 },
+          { "profitPct": 120, "sellPct": 33.33 },
+          { "profitPct": 250, "sellPct": 33.34 }
+        ],
+        "trailingStop": { "enabled": true, "activationProfitPct": 40, "trailingPct": 18 },
+        "maxHoldMinutes": 720
+      }
+    }
+  },
+  "activeProfile": "conservative",
   "rpc": {
     "endpoints": [
       {
@@ -53,7 +197,7 @@
     "minHolderCount": 0,
     "maxAgeHours": 24
   },
-  "execution": {
+  "executionLegacy": {
     "slippageBps": 500,
     "priorityFeeLamports": 10000,
     "maxRetries": 3,

@@ -1,0 +1,22 @@
+{
+  "denyByDefault": true,
+  "allowlistedProgramIds": [],
+  "instructionDenyList": [
+    {
+      "programId": "11111111111111111111111111111111",
+      "encoding": "u32le",
+      "deny": []
+    },
+    {
+      "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "encoding": "u8",
+      "deny": []
+    }
+  ],
+  "limits": {
+    "maxLamportsPerTransaction": 2000000000,
+    "maxComputeUnitPriceMicroLamports": 2000000,
+    "maxComputeUnits": 1400000
+  },
+  "requireSignerAsFeePayer": true
+}

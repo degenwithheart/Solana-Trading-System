@@ -42,10 +42,12 @@ function checkStructure() {
     "package.json",
     "README.md",
     ".gitignore",
+    "RUNBOOK.md",
     "system-1-trading-node/package.json",
     "system-1-trading-node/tsconfig.json",
     "system-2-signer/package.json",
     "system-2-signer/tsconfig.json",
+    "system-2-signer/policy.example.json",
     "system-3-web-ui/package.json",
     "system-3-web-ui/tsconfig.json"
   ];
@@ -59,7 +61,7 @@ function checkConfigJson() {
   must(exists(configPath), "Missing System 1 config (config.json or config.example.json)");
   try {
     const cfg = JSON.parse(readText(configPath));
-    const requiredTop = ["network", "platform", "rpc", "strategy", "risk", "filters", "execution"];
+    const requiredTop = ["network", "platform", "constants", "controls", "execution", "profiles", "activeProfile", "rpc", "risk", "filters"];
     for (const k of requiredTop) must(cfg && Object.prototype.hasOwnProperty.call(cfg, k), `config missing '${k}'`);
   } catch {
     failures.push(`Invalid JSON: ${configPath}`);
@@ -109,6 +111,13 @@ function checkSignerLocalhost() {
   must(host === "127.0.0.1" || host === "localhost", "Signer must bind to localhost only (HOST=127.0.0.1)");
 }
 
+function checkSignerPolicyFile() {
+  if (!exists("system-2-signer/.env")) return;
+  if (!exists("system-2-signer/policy.json")) {
+    warnings.push("system-2-signer/policy.json missing (run 'npm run setup:env')");
+  }
+}
+
 function checkNoHardcodedKeys() {
   const files = listFiles(root, (p) => /\.(ts|tsx|js|mjs)$/.test(p) && !p.includes("node_modules"));
   for (const abs of files) {
@@ -145,6 +154,7 @@ async function main() {
   checkConfigJson();
   checkEnvPlaceholders();
   checkSignerLocalhost();
+  checkSignerPolicyFile();
   checkNoHardcodedKeys();
 
   const p3000 = await checkPortFree(3000);

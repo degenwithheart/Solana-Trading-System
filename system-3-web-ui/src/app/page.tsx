@@ -1,18 +1,26 @@
-import { getPositions, getTradingHealth, getTradingStatus } from "../lib/api-client";
+import { getControls, getGovernance, getPositions, getTradingHealth, getTradingStatus } from "../lib/api-client";
+import { ControlsPanel } from "../components/controls-panel";
+import { GovernancePanel } from "../components/governance-panel";
 
 export default async function Page() {
-  const [health, status, positions] = await Promise.allSettled([
+  const [health, status, positions, controls, governance] = await Promise.allSettled([
     getTradingHealth(),
     getTradingStatus(),
-    getPositions()
+    getPositions(),
+    getControls(),
+    getGovernance()
   ]);
 
   const healthVal = health.status === "fulfilled" ? health.value : null;
   const statusVal = status.status === "fulfilled" ? status.value.status : null;
   const positionsVal = positions.status === "fulfilled" ? positions.value.positions : [];
+  const controlsVal = controls.status === "fulfilled" ? controls.value : null;
+  const governanceVal = governance.status === "fulfilled" ? governance.value.rules : [];
 
   return (
     <div className="space-y-6">
+      {controlsVal ? <ControlsPanel initial={controlsVal} /> : null}
+      <GovernancePanel initial={governanceVal} />
       <section className="rounded-xl border border-white/10 bg-white/5 p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -80,4 +88,3 @@ function Stat({ label, value }: { label: string; value: string | number }) {
     </div>
   );
 }
-

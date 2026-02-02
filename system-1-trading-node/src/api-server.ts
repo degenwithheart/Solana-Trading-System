@@ -8,15 +8,23 @@ import type { DiscoveryService } from "./chain/discovery";
 import type { RiskManager } from "./risk/risk-manager";
 import type { Logger } from "./utils/logger";
 import type { HealthStatus } from "../../shared/types";
+import type { TradingConfig } from "../../shared/types";
 import { WebSocketServer } from "ws";
 import http from "node:http";
+import type { ControlsRepo } from "./controls/controls";
+import type { GovernanceRepo } from "./db/repositories/governance";
+import type { PaperLedgerRepo } from "./db/repositories/paper-ledger";
 
 export function createApiServer(opts: {
   env: TradingEnv;
+  cfg: TradingConfig;
   orchestrator: Orchestrator;
   discovery: DiscoveryService;
   risk: RiskManager;
   log: Logger;
+  controls: ControlsRepo;
+  governance: GovernanceRepo;
+  paperLedger: PaperLedgerRepo;
 }) {
   const app = express();
   app.disable("x-powered-by");
@@ -68,8 +76,87 @@ export function createApiServer(opts: {
   });
 
   app.get("/candidates", (_req, res) => {
-    res.json({ candidates: opts.discovery.list() });
+    res.json({ candidates: opts.discovery.list(500) });
   });
+
+  app.get("/controls", (_req, res) => {
+    const controls = opts.controls.load(opts.cfg.controls);
+    const activeProfile = opts.controls.getActiveProfile(opts.cfg.activeProfile);
+    res.json({ controls, activeProfile, profiles: Object.keys(opts.cfg.profiles) });
+  });
+
+  app.post("/controls", (req, res) => {
+    const schema = z
+      .object({
+        pauseDiscovery: z.boolean().optional(),
+        pauseEntries: z.boolean().optional(),
+        pauseExits: z.boolean().optional(),
+        killSwitch: z.boolean().optional(),
+        activeProfile: z.string().min(1).optional()
+      })
+      .strict();
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "invalid_body" });
+    const { activeProfile, ...patch } = parsed.data;
+    opts.controls.set(patch);
+    if (activeProfile) opts.controls.setActiveProfile(activeProfile);
+    res.json({ ok: true });
+  });
+
+  app.post("/controls/close-all", (_req, res) => {
+    opts.controls.set({ killSwitch: true, pauseEntries: true });
+    res.json({ ok: true });
+  });
+
+  app.get("/governance", (_req, res) => {
+    res.json({ rules: opts.governance.list() });
+  });
+
+  app.post("/governance", (req, res) => {
+    const schema = z.object({
+      mint: z.string().min(32),
+      mode: z.enum(["ALLOW", "BLOCK"]),
+      reason: z.string().max(200).optional()
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "invalid_body" });
+    opts.governance.set(parsed.data.mint, parsed.data.mode, parsed.data.reason ?? null);
+    res.json({ ok: true });
+  });
+
+  app.delete("/governance/:mint", (req, res) => {
+    const mint = String(req.params.mint ?? "");
+    if (!mint) return res.status(400).json({ error: "missing_mint" });
+    opts.governance.remove(mint);
+    res.json({ ok: true });
+  });
+
+  if (opts.cfg.metrics.enabled) {
+    app.get(opts.cfg.metrics.path, (_req, res) => {
+      const open = opts.risk.listPositions().filter((p) => p.status === "OPEN").length;
+      const balancePaper = opts.cfg.mode === "paper" ? opts.paperLedger.getSolBalance(opts.cfg.paper.initialSol) : null;
+      res.json({
+        ts: new Date().toISOString(),
+        mode: opts.cfg.mode,
+        openPositions: open,
+        candidates: opts.discovery.list(500).length,
+        paperSolBalance: balancePaper
+      });
+    });
+    app.get(opts.cfg.metrics.promPath, (_req, res) => {
+      const open = opts.risk.listPositions().filter((p) => p.status === "OPEN").length;
+      const candidates = opts.discovery.list(500).length;
+      const paper = opts.cfg.mode === "paper" ? opts.paperLedger.getSolBalance(opts.cfg.paper.initialSol) : 0;
+      res.type("text/plain").send(
+        [
+          `trading_mode{mode="${opts.cfg.mode}"} 1`,
+          `open_positions ${open}`,
+          `candidates ${candidates}`,
+          `paper_sol_balance ${paper}`
+        ].join("\n") + "\n"
+      );
+    });
+  }
 
   app.post("/candidates", async (req, res) => {
     const schema = z.object({ mint: z.string().min(32) });
@@ -116,4 +203,3 @@ export function createApiServer(opts: {
 
   return server;
 }
-
