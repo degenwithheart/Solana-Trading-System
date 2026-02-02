@@ -18,6 +18,19 @@ export type Platform = "universal" | "macos" | "linux" | "windows";
 export type TradingConfig = {
   network: SolanaCluster;
   platform: Platform;
+  ai: {
+    enabled: boolean;
+    epsilon: number;
+    recentWindowDays: number;
+    bootstrapOnStartup: boolean;
+    minSamplesBeforeLive: number;
+    maxRugScore: number;
+    reward: {
+      holdPenalty: number;
+      drawdownPenalty: number;
+    };
+    aiDailyLossLimitSol: number;
+  };
   constants: {
     wsolMint: string;
   };

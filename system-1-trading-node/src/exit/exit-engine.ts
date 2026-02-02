@@ -11,6 +11,7 @@ import { getSolDeltaFromTx, getTokenDeltaRawFromTx } from "../chain/tx-deltas";
 import type { TxAttemptsRepo } from "../db/repositories/tx-attempts";
 import type { PaperLedgerRepo } from "../db/repositories/paper-ledger";
 import type { PaperBalancesRepo } from "../db/repositories/paper-ledger";
+import type { DegenAiController } from "../ai/degen-policy";
 
 type PositionRow = any;
 
@@ -30,6 +31,7 @@ export class ExitEngine {
       txAttempts: TxAttemptsRepo;
       paperLedger: PaperLedgerRepo;
       paperBalances: PaperBalancesRepo;
+      ai?: DegenAiController;
     }
   ) {
     this.wsolMint = new PublicKey(deps.cfg.constants.wsolMint);
@@ -61,10 +63,15 @@ export class ExitEngine {
       if (!entryPriceSol || entryPriceSol <= 0) continue;
 
       const profitPct = ((currentPriceSol - entryPriceSol) / entryPriceSol) * 100;
-      const state = safeJsonParse(row.state_json, { takeProfitHits: [], highWaterPriceSol: null, realizedPnlSol: 0 });
+      const state = safeJsonParse(row.state_json, { takeProfitHits: [], highWaterPriceSol: null, realizedPnlSol: 0, maxDrawdownPct: 0 });
 
       if (state.highWaterPriceSol === null || currentPriceSol > state.highWaterPriceSol) {
         state.highWaterPriceSol = currentPriceSol;
+      }
+      if (typeof state.highWaterPriceSol === "number" && state.highWaterPriceSol > 0) {
+        const dd = ((state.highWaterPriceSol - currentPriceSol) / state.highWaterPriceSol) * 100;
+        const prev = typeof state.maxDrawdownPct === "number" && Number.isFinite(state.maxDrawdownPct) ? state.maxDrawdownPct : 0;
+        if (dd > prev) state.maxDrawdownPct = dd;
       }
 
       const balanceRaw =
@@ -250,7 +257,16 @@ export class ExitEngine {
     state.realizedPnlSol = (Number(state.realizedPnlSol ?? 0) || 0) + realized;
 
     if (reason.kind === "FINAL") {
+      const closedAtMs = Date.now();
       this.deps.risk.closePosition(row.id, { exitSignature: sig, pnlSol: Number(state.realizedPnlSol ?? 0), status: "CLOSED", notes: "exit_all" });
+      const openedAt = Date.parse(String(row.opened_at));
+      const holdMinutes = openedAt ? (closedAtMs - openedAt) / (1000 * 60) : 0;
+      this.deps.ai?.onExit(row.id, {
+        realizedPnlSol: Number(state.realizedPnlSol ?? 0) || 0,
+        holdMinutes,
+        maxDrawdownPct: Number(state.maxDrawdownPct ?? 0) || 0,
+        closedAtMs
+      });
     } else {
       this.deps.positions.updateState(row.id, { stateJson: JSON.stringify(state) });
     }

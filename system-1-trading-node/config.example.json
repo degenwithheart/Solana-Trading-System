@@ -1,6 +1,19 @@
 {
   "network": "mainnet-beta",
   "platform": "universal",
+  "ai": {
+    "enabled": false,
+    "epsilon": 0.05,
+    "recentWindowDays": 14,
+    "bootstrapOnStartup": true,
+    "minSamplesBeforeLive": 200,
+    "maxRugScore": 0.7,
+    "reward": {
+      "holdPenalty": 0.0003,
+      "drawdownPenalty": 0.5
+    },
+    "aiDailyLossLimitSol": 0.5
+  },
   "constants": {
     "wsolMint": "So11111111111111111111111111111111111111112"
   },

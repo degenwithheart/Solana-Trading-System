@@ -25,6 +25,7 @@ Key config sections:
 - `execution.venues` / `execution.venueOrder` (multi-venue routing)
 - `profiles` + `activeProfile` (risk + exits presets)
 - `controls` (defaults; runtime overrides via dashboard/API)
+- `ai` (entry controller; requires enough trained samples before it can take control)
 
 ## 3) Build
 

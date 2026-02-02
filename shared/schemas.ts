@@ -12,6 +12,32 @@ export const zSolanaCluster = z.enum(["mainnet-beta", "devnet", "testnet"]);
 export const zTradingConfig = z.object({
   network: zSolanaCluster,
   platform: z.enum(["universal", "macos", "linux", "windows"]).default("universal"),
+  ai: z
+    .object({
+      enabled: z.boolean().default(false),
+      epsilon: z.number().min(0).max(1).default(0.05),
+      recentWindowDays: z.number().int().min(1).max(365).default(14),
+      bootstrapOnStartup: z.boolean().default(true),
+      minSamplesBeforeLive: z.number().int().min(0).default(200),
+      maxRugScore: z.number().min(0).max(1).default(0.7),
+      reward: z
+        .object({
+          holdPenalty: z.number().min(0).default(0.0003),
+          drawdownPenalty: z.number().min(0).default(0.5)
+        })
+        .default({ holdPenalty: 0.0003, drawdownPenalty: 0.5 }),
+      aiDailyLossLimitSol: z.number().min(0).default(0.5)
+    })
+    .default({
+      enabled: false,
+      epsilon: 0.05,
+      recentWindowDays: 14,
+      bootstrapOnStartup: true,
+      minSamplesBeforeLive: 200,
+      maxRugScore: 0.7,
+      reward: { holdPenalty: 0.0003, drawdownPenalty: 0.5 },
+      aiDailyLossLimitSol: 0.5
+    }),
   constants: z.object({
     wsolMint: z.string().min(32)
   }),

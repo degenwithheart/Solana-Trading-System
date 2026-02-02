@@ -7,6 +7,7 @@ import { FeatureEngine } from "./features/feature-engine";
 import { FilterSystem } from "./filters/filter-system";
 import { ModelClient } from "./ml/model-client";
 import { StrategyEngine } from "./strategy/strategy-engine";
+import type { DegenAiController } from "./ai/degen-policy";
 import { RiskManager } from "./risk/risk-manager";
 import { Logger } from "./utils/logger";
 import { RpcManager } from "./rpc/rpc-manager";
@@ -29,6 +30,7 @@ export type OrchestratorStatus = {
   lastError?: string;
   candidates: number;
   openPositions: number;
+  ai?: { enabled: boolean; trainedSamples: number; canControl: boolean; reason?: string; rolling24hAiPnlSol: number };
 };
 
 export class Orchestrator {
@@ -61,10 +63,11 @@ export class Orchestrator {
       actionDedupe: ActionDedupeRepo;
       paperLedger: PaperLedgerRepo;
       paperBalances: PaperBalancesRepo;
+      ai: DegenAiController;
     }
   ) {
     this.filter = new FilterSystem(deps.cfg.filters);
-    this.strategy = new StrategyEngine(deps.cfg.strategy);
+    this.strategy = new StrategyEngine({ strategyCfg: deps.cfg.strategy, aiCfg: deps.cfg.ai, ai: deps.ai, log: deps.log });
     this.signer = new SignerClient({
       baseUrl: deps.env.SIGNER_URL,
       timeoutMs: deps.env.SIGNER_TIMEOUT_MS,
@@ -86,7 +89,8 @@ export class Orchestrator {
       jupiterPriceUrl: deps.env.JUPITER_PRICE_URL,
       txAttempts: deps.txAttempts,
       paperLedger: deps.paperLedger,
-      paperBalances: deps.paperBalances
+      paperBalances: deps.paperBalances,
+      ai: deps.ai
     });
     this.reconciler = new Reconciler({ rpc: deps.rpc, positions: deps.positions, log: deps.log });
   }
@@ -95,7 +99,21 @@ export class Orchestrator {
     const positions = this.deps.risk.listPositions();
     const open = positions.filter((p) => p.status === "OPEN").length;
     const candidates = this.deps.discovery.list(250).length;
-    this.status = { ...this.status, candidates, openPositions: open, running: this.running };
+    const now = Date.now();
+    const aiCtl = this.deps.ai.canControlNow(now);
+    this.status = {
+      ...this.status,
+      candidates,
+      openPositions: open,
+      running: this.running,
+      ai: {
+        enabled: this.deps.cfg.ai.enabled,
+        trainedSamples: this.deps.ai.trainedSamples(),
+        canControl: aiCtl.ok,
+        reason: aiCtl.reason,
+        rolling24hAiPnlSol: this.deps.ai.rolling24hAiPnlSol(now)
+      }
+    };
     return this.status;
   }
 
@@ -161,7 +179,6 @@ export class Orchestrator {
     if (controls.killSwitch || controls.pauseEntries) return;
     if (candidates.length === 0) return;
 
-    if (openPositions.length >= profile.entry.maxOpenPositions) return;
     const canOpen = this.deps.risk.canOpenPosition(openPositions.length);
     if (!canOpen.ok) return;
 
@@ -208,9 +225,32 @@ export class Orchestrator {
       rug: score.rugProbability,
       reasons: score.reasons
     });
-    const decision = this.strategy.decideEntry(score, feats);
+    const allowedProfiles = Object.entries(this.deps.cfg.profiles)
+      .filter(([, p]) => !!p?.enabled)
+      .map(([name]) => name);
+    const decision = this.strategy.decideEntry({
+      score,
+      tokenFeatures: feats,
+      featureVector: vec,
+      defaultProfile: activeProfileName,
+      allowedProfiles
+    });
     if (decision.action !== "ENTER") {
-      this.deps.log.info("candidate_skipped", { mint: candidate.mint, reason: decision.reason, score });
+      this.deps.log.info("candidate_skipped", { mint: candidate.mint, reason: decision.reason, controller: decision.controller, score, ai: decision.ai ?? null });
+      this.deps.discovery.remove(candidate.mint);
+      return;
+    }
+
+    const entryProfileName = decision.profile;
+    const entryProfile = this.deps.cfg.profiles[entryProfileName];
+    if (!entryProfile || !entryProfile.enabled) throw new Error("Entry profile is missing or disabled");
+    if (openPositions.length >= entryProfile.entry.maxOpenPositions) {
+      this.deps.log.info("candidate_skipped", {
+        mint: candidate.mint,
+        reason: "profile_max_open_positions",
+        controller: decision.controller,
+        profile: entryProfileName
+      });
       this.deps.discovery.remove(candidate.mint);
       return;
     }
@@ -219,9 +259,9 @@ export class Orchestrator {
     const balanceSol = balanceLamports / 1e9;
 
     const sizeSol = clampSol(
-      profile.entry.positionSizeFixedSol + (balanceSol * profile.entry.positionSizeWalletPct) / 100,
-      profile.entry.positionSizeMinSol,
-      profile.entry.positionSizeMaxSol
+      entryProfile.entry.positionSizeFixedSol + (balanceSol * entryProfile.entry.positionSizeWalletPct) / 100,
+      entryProfile.entry.positionSizeMinSol,
+      entryProfile.entry.positionSizeMaxSol
     );
     if (sizeSol <= 0) return;
 
@@ -270,7 +310,7 @@ export class Orchestrator {
         entryPriceSol = undefined;
       }
     }
-    this.deps.risk.openPosition({
+    const opened = this.deps.risk.openPosition({
       mint: candidate.mint,
       sizeSol,
       entrySignature: signature,
@@ -278,9 +318,17 @@ export class Orchestrator {
       entryTokenAmountRaw: tokenDeltaRaw && tokenDeltaRaw > 0n ? tokenDeltaRaw.toString() : undefined,
       tokenDecimals: decimals,
       entryPriceSol,
-      strategyJson: JSON.stringify({ profile: activeProfileName, venue: venueName }),
-      stateJson: JSON.stringify({ takeProfitHits: [] as number[], highWaterPriceSol: null as number | null })
+      strategyJson: JSON.stringify({ profile: entryProfileName, venue: venueName, controller: decision.controller }),
+      stateJson: JSON.stringify({ takeProfitHits: [] as number[], highWaterPriceSol: null as number | null, maxDrawdownPct: 0 })
     });
+    const action = (decision.controller === "ai" && decision.ai?.action?.startsWith("profile:") ? decision.ai.action : `profile:${entryProfileName}`) as const;
+    this.deps.ai.onEntry(
+      opened.id,
+      decision.snapshot,
+      action,
+      decision.controller,
+      Date.parse(opened.openedAt) || Date.now()
+    );
     this.deps.discovery.remove(candidate.mint);
     this.deps.log.info("position_opened", { mint: candidate.mint, sizeSol, signature, score });
   }

@@ -171,6 +171,27 @@ function migrate(db: Db, log: Logger): void {
           decimals INTEGER NOT NULL
         );
       `
+    },
+    {
+      id: 11,
+      sql: `
+        CREATE TABLE IF NOT EXISTS ai_entries (
+          entry_id TEXT PRIMARY KEY,
+          features_json TEXT NOT NULL,
+          action TEXT NOT NULL,
+          controller TEXT NOT NULL,
+          opened_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_entries_opened_at ON ai_entries(opened_at);
+        CREATE INDEX IF NOT EXISTS idx_ai_entries_controller ON ai_entries(controller);
+
+        CREATE TABLE IF NOT EXISTS ai_outcomes (
+          entry_id TEXT PRIMARY KEY,
+          reward REAL NOT NULL,
+          closed_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_outcomes_closed_at ON ai_outcomes(closed_at);
+      `
     }
   ];
 

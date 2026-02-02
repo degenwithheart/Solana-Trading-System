@@ -44,6 +44,19 @@ This document lists **implemented** features in this repository and a short func
   - `solana-trading-system/system-1-trading-node/src/strategy/strategy-engine.ts`
   - `solana-trading-system/system-1-trading-node/src/orchestrator.ts`
 
+### Degen AI Entry Controller (linear contextual bandit)
+- Observes every entry the system takes, logs the exact feature snapshot + chosen action (`profile:<name>`) and who controlled it (`system` or `ai`).
+- When enabled and trained, controls only entry decisions: chooses `skip` or selects an existing configured profile (never invents profiles).
+- Learns online only from the system’s own realized PnL at full close (reward shaped by hold time + max drawdown) with recency bias and epsilon-greedy exploration.
+- Includes an AI-only rolling 24h loss circuit breaker that disables AI control automatically.
+- Files:
+  - `solana-trading-system/system-1-trading-node/src/ai/degen-policy.ts`
+  - `solana-trading-system/system-1-trading-node/src/ai/model-store.ts`
+  - `solana-trading-system/system-1-trading-node/src/ai/bootstrap.ts`
+  - `solana-trading-system/system-1-trading-node/src/ai/reward.ts`
+  - `solana-trading-system/system-1-trading-node/src/ai/stats.ts`
+  - `solana-trading-system/system-1-trading-node/src/db/repositories/ai.ts`
+
 ### Multi-venue execution (Jupiter-based routing attempts)
 - Executes swaps through Jupiter Quote/Swap APIs.
 - Attempts venues in configured order (`execution.venueOrder`), where each venue can:

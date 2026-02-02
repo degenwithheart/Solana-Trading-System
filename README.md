@@ -25,6 +25,7 @@ Main knobs live in `system-1-trading-node/config.json`:
 - `execution.venues` / `execution.venueOrder` (Jupiter multi-venue attempts)
 - `profiles` + `activeProfile` (position sizing + TP/SL/trailing/time exits)
 - `controls` (defaults; runtime overrides via `/controls`)
+- `ai` (degen entry controller; deterministic, local, auditable)
 
 ## UI security
 

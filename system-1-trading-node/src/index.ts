@@ -19,6 +19,8 @@ import { ControlsRepo } from "./controls/controls";
 import { GovernanceRepo } from "./db/repositories/governance";
 import { ActionDedupeRepo } from "./db/repositories/action-dedupe";
 import { PaperBalancesRepo, PaperLedgerRepo } from "./db/repositories/paper-ledger";
+import { AiEntriesRepo, AiOutcomesRepo } from "./db/repositories/ai";
+import { DegenAiController } from "./ai/degen-policy";
 
 dotenv.config();
 
@@ -59,6 +61,9 @@ async function main() {
   const actionDedupe = new ActionDedupeRepo(db);
   const paperLedger = new PaperLedgerRepo(db);
   const paperBalances = new PaperBalancesRepo(db);
+  const aiEntries = new AiEntriesRepo(db);
+  const aiOutcomes = new AiOutcomesRepo(db);
+  const ai = new DegenAiController({ aiCfg: cfg.ai, entries: aiEntries, outcomes: aiOutcomes, settings, log });
 
   const discovery = new DiscoveryService(candidates);
   const intelligence = new ChainIntelligence(rpc);
@@ -84,9 +89,17 @@ async function main() {
     governance,
     actionDedupe,
     paperLedger,
-    paperBalances
+    paperBalances,
+    ai
   });
   const server = createApiServer({ env, cfg, orchestrator, discovery, risk, log, controls: controlsRepo, governance, paperLedger });
+
+  if (cfg.ai.enabled && cfg.ai.bootstrapOnStartup) {
+    const allowedProfiles = Object.entries(cfg.profiles)
+      .filter(([, p]) => !!p?.enabled)
+      .map(([name]) => name);
+    ai.bootstrap(Date.now(), allowedProfiles);
+  }
 
   server.listen(env.PORT, env.HOST, () => {
     log.info("trading_node_started", { host: env.HOST, port: env.PORT });
